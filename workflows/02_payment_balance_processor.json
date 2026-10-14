@@ -1,0 +1,705 @@
+{
+  "name": "AI Content Platform — Payment Balance Processor",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-status-callback",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        384,
+        112
+      ],
+      "name": "Webhook"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "transaction_id",
+              "value": "={{ $json.body.id }}",
+              "type": "string"
+            },
+            {
+              "name": "status_bank",
+              "value": "={{ $json.body.status }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        592,
+        112
+      ],
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 20
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        752
+      ],
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## Block \"Receiving Payment Notification from the Bank\" ",
+        "height": 80,
+        "width": 1296
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        0
+      ],
+      "name": "Sticky Note13",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "content": "## \"Token allocation to user and user notification regarding allocations\" block",
+        "height": 80,
+        "width": 1152
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        384,
+        624
+      ],
+      "name": "Sticky Note14",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "payments",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "transaction_id": "={{ $json.transaction_id }}",
+            "status_bank": "={{ $json.status_bank }}"
+          },
+          "matchingColumns": [
+            "transaction_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        816,
+        112
+      ],
+      "name": "Update rows in a table"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        784,
+        752
+      ],
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "payments",
+          "mode": "list"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "status_bank",
+              "value": "CONFIRMED"
+            },
+            {
+              "column": "status_balance",
+              "value": "pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        576,
+        752
+      ],
+      "name": "Select rows payments"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "users",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "user_id",
+              "value": "={{ $('Loop Over Items').item.json.telegram_user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        768
+      ],
+      "name": "Select rows users"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "users",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "balance_token": "={{ Number($json.balance_token) + Number($('Select rows payments').item.json.tokens) }}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1456,
+        768
+      ],
+      "name": "Update rows users"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "payments",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "transaction_id": "={{ $('Select rows payments').item.json.transaction_id }}",
+            "status_balance": "done"
+          },
+          "matchingColumns": [
+            "transaction_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1696,
+        768
+      ],
+      "name": "Update rows payments"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Select rows payments').item.json.telegram_user_id }}",
+        "text": "=You have been credited with {{ $('Select rows payments').item.json.tokens }} 💎 token",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "Menu",
+                    "additionalFields": {
+                      "callback_data": "/menu"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1984,
+        768
+      ],
+      "name": "Send new tokens"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.ADMIN_CHAT_ID }}",
+        "text": "=Arrival:\n{{ $('Update rows payments').item.json.amount }} rub\nfrom: {{ $('Update rows payments').item.json.telegram_user_id }}\nreferral:{{ $('Update rows users').item.json.reference }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2192,
+        768
+      ],
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $('Select rows users').item.json.reference }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2400,
+        768
+      ],
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "usdt_rub_rate",
+              "value": "={{ Number($env.PARTNER_FX_RATE || 1) }}",
+              "type": "number"
+            },
+            {
+              "name": "fee_factor",
+              "value": "={{ Number($env.PARTNER_NET_FACTOR || 0) }}",
+              "type": "number"
+            },
+            {
+              "name": "referral_percent",
+              "value": "={{ Number($env.PARTNER_SHARE || 0) }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2640,
+        784
+      ],
+      "name": "constant (kurs,comission,ref_poresnt)"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "earnings_ref",
+              "value": "={{ \n  Math.floor(\n    (\n      Number($('Update rows payments').item.json.amount)\n      * Number($json.fee_factor)\n      * Number($json.referral_percent)\n      / Number($json.usdt_rub_rate)\n    ) * 100\n  ) / 100\n}}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2848,
+        784
+      ],
+      "name": "formula"
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "partners",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "user_id",
+              "value": "={{ $('Update rows users').item.json.reference }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3056,
+        784
+      ],
+      "name": "Select rows from a table"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "portfolio_demo"
+        },
+        "table": {
+          "__rl": true,
+          "value": "partners",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_id": "={{ $json.user_id }}",
+            "earned_usdt": "={{\n  Math.floor(\n    (\n      Number($json.earned_usdt || 0) +\n      Number($('formula').item.json.earnings_ref || 0)\n    ) * 100\n  ) / 100\n}}"
+          },
+          "matchingColumns": [
+            "user_id"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3264,
+        784
+      ],
+      "name": "Update rows in a table1"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.user_id }}",
+        "text": "=Accrued: {{ $('formula').item.json.earnings_ref }}$\nBalance: {{ $json.earned_usdt }}$",
+        "replyMarkup": "inlineKeyboard",
+        "inlineKeyboard": {
+          "rows": [
+            {
+              "row": {
+                "buttons": [
+                  {
+                    "text": "💰 Partner Portal",
+                    "additionalFields": {
+                      "callback_data": "/admin"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3536,
+        784
+      ],
+      "name": "Send new tokens1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Update rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Select rows payments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Select rows users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows payments": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows users": {
+      "main": [
+        [
+          {
+            "node": "Update rows users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update rows users": {
+      "main": [
+        [
+          {
+            "node": "Update rows payments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update rows payments": {
+      "main": [
+        [
+          {
+            "node": "Send new tokens",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send new tokens": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "constant (kurs,comission,ref_poresnt)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "constant (kurs,comission,ref_poresnt)": {
+      "main": [
+        [
+          {
+            "node": "formula",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formula": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Update rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "Send new tokens1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send new tokens1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
